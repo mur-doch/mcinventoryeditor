@@ -43,35 +43,6 @@ class ByteHandler:
         return s 
 
 
-# class ByteFileHandler:
-#     file: BinaryIO 
-
-#     def __init__(self, file):
-#         self.file = file
-
-#     def seek_to(self, key: bytes):
-#         self.file.seek(0)
-
-    
-#     def read_byte(self):
-#         pass
-
-#     def read_short(self):
-#         pass
-
-#     def read_int(self):
-#         pass
-
-#     def read_long(self):
-#         pass
-
-#     def read_float(self):
-#         pass
-
-#     def read_str(self, size):
-#         pass
-
-
 class Tag(ABC):
     def __init__(self):
         self.tag_type = None
@@ -91,15 +62,6 @@ class Tag(ABC):
 
     @abstractmethod
     def read_payload(self, byte_handler: ByteHandler):
-        # # self.val = byte_handler.read_byte()
-        # if self.tag_type == 0:
-        #     pass 
-        # elif self.tag_type == 1:
-        #     self.val = byte_handler.read_byte()
-        # elif self.tag_type == 5:
-        #     self.val = byte_handler.read_float()
-        # elif self.tag_type == 8:
-        #     self.val = byte_handler.read_str()
         pass
 
     def __str__(self):
@@ -107,82 +69,29 @@ class Tag(ABC):
 
 
 class TagEnd(Tag):
-    pass
-    # def __init__(self):
-    #     self.tag_type = 0
-
-
-class TagByte:
     def __init__(self):
-        self.tag_type = 1
-        self.name = ""
-        self.val = 0
-
-    def read(self, byte_handler: ByteHandler):        
-        tag_type = byte_handler.read_byte()
-        self.read_header(byte_handler)
-        self.read_payload(byte_handler)
+        super()
+        self.tag_type = 0
     
-    def read_header(self, byte_handler: ByteHandler):
-        # Read short for the length of the name 
-        name_size = byte_handler.read_short()
-        name = byte_handler.read_str(name_size)
-        self.name = name
+    def read(self, byte_handler: ByteHandler):
+        self.tag_type = byte_handler.read_byte()
 
+
+class TagByte(Tag):
     def read_payload(self, byte_handler: ByteHandler):
         self.val = byte_handler.read_byte()
 
-    def __str__(self):
-        return f"{self.tag_type}, {self.name}, {self.val}"
 
-class TagFloat:
-    def __init__(self):
-        self.tag_type = 5
-        self.name = ""
-        self.val = 0
-    
-    def read(self, byte_handler: ByteHandler):        
-        tag_type = byte_handler.read_byte()
-        self.read_header(byte_handler)
-        self.read_payload(byte_handler)
-    
-    def read_header(self, byte_handler: ByteHandler):
-        # Read short for the length of the name 
-        name_size = byte_handler.read_short()
-        name = byte_handler.read_str(name_size)
-        self.name = name
-
+class TagFloat(Tag):
     def read_payload(self, byte_handler: ByteHandler):
         self.val = byte_handler.read_float()
 
-    def __str__(self):
-        return f"{self.tag_type}, {self.name}, {self.val}"
 
-
-class TagString:
-    def __init__(self):
-        self.tag_type = 8
-        self.name = ""
-        self.val = None
-
-    def read(self, byte_handler: ByteHandler):        
-        tag_type = byte_handler.read_byte()
-        self.read_header(byte_handler)
-        self.read_payload(byte_handler)
-    
-    def read_header(self, byte_handler: ByteHandler):
-        # Read short for the length of the name 
-        name_size = byte_handler.read_short()
-        name = byte_handler.read_str(name_size)
-        self.name = name
-
+class TagString(Tag):    
     def read_payload(self, byte_handler: ByteHandler):
         # Read short for the length of the string 
         length = byte_handler.read_short()
         self.val = byte_handler.read_str(length)
-
-    def __str__(self):
-        return f"{self.tag_type}, {self.name}, {self.val}"
 
 
 def hex_str_to_byte_arr(hex_str):
