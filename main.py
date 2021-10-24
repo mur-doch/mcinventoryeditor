@@ -1,4 +1,4 @@
-# import gzip
+import gzip
 import struct
 from abc import ABC, abstractmethod 
 
@@ -291,7 +291,9 @@ def inventory_bytes_from_save(level_file):
 
 def main():
     # Read the minecraft save file 
-    with open('level.dat', 'rb') as file:
+    # with open('level.dat', 'rb') as file:
+    #     bytes = file.read()
+    with gzip.open('level2.dat', 'rb') as file:
         bytes = file.read()
     # Look for the start of the inventory list in the data file
     found_index = bytes.find(b'\x09\x00\x09\x49\x6E\x76\x65\x6E\x74\x6F\x72\x79')
