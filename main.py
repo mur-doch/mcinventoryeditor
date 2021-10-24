@@ -159,6 +159,10 @@ class TagByteArray(Tag):
             new_tag.read_payload()
             self.val.append(new_tag)
 
+    def __str__(self):
+        s = f"Byte Array '{self.name}': {self.val}"
+        return s 
+
 
 class TagString(Tag):    
     def read(self, byte_handler: ByteHandler):        
@@ -173,6 +177,10 @@ class TagString(Tag):
 
 
 class TagList(Tag):
+    def __init__(self):
+        super().__init__()
+        self.sub_tag_type = None
+
     def read(self, byte_handler: ByteHandler):        
         self.tag_type = byte_handler.read_byte()
         self.read_header(byte_handler)
@@ -180,13 +188,20 @@ class TagList(Tag):
 
     def read_payload(self, byte_handler: ByteHandler):
         self.val = []
-        tagid = byte_handler.read_byte()
+        self.sub_tag_type = byte_handler.read_byte()
         list_size = byte_handler.read_int()
-        TagType = id_to_tag(tagid)
+        TagType = id_to_tag(self.sub_tag_type)
         for i in range(list_size):
             tag = TagType()
             tag.read_payload(byte_handler)
             self.val.append(tag)
+
+    def __str__(self):
+        # TODO: Shouldn't print self.name if it is just going to be null
+        s = f"List '{self.name}' of types {self.sub_tag_type}"
+        for i, subtag in enumerate(self.val):
+            s += f"\n{i}: {subtag.__str__()}"
+        return s
 
 
 class TagCompound(Tag):
@@ -209,6 +224,12 @@ class TagCompound(Tag):
             tag.read(byte_handler)
             self.val.append(tag)
 
+    def __str__(self):
+        s = f"Compound '{self.name}'"
+        for i, subtag in enumerate(self.val):
+            s += f"\n{i}: {subtag.__str__()}"
+        return s
+
 
 class TagIntArray(Tag):
     def read(self, byte_handler: ByteHandler):        
@@ -223,6 +244,10 @@ class TagIntArray(Tag):
             tag = TagInt()
             tag.read_payload(byte_handler)
             self.val.append(tag)
+    
+    def __str__(self):
+        s = f"Int Array '{self.name}': {self.val}"
+        return s 
 
 
 class TagLongArray(Tag):
@@ -238,6 +263,10 @@ class TagLongArray(Tag):
             tag = TagLong()
             tag.read_payload()
             self.val.append(tag)
+
+    def __str__(self):
+        s = f"Long Array '{self.name}': {self.val}"
+        return s 
 
 
 def id_to_tag(id):
