@@ -52,10 +52,10 @@ class ByteHandler:
 
 
 class Tag(ABC):
-    def __init__(self):
-        self.tag_type = None
-        self.name = None 
-        self.val = None
+    def __init__(self, tag_type=None, name=None, val=None):
+        self.tag_type = tag_type
+        self.name = name 
+        self.val = val
     
     def read(self, byte_handler: ByteHandler):        
         self.tag_type = byte_handler.read_byte()
@@ -72,6 +72,24 @@ class Tag(ABC):
     def read_payload(self, byte_handler: ByteHandler):
         pass
 
+    def get_header_bytes(self):
+        byte_form = b''
+        # Get the tag type byte
+        byte_form += struct.pack(">B", self.tag_type)
+        # Get the length of the name
+        byte_form += struct.pack(">H", len(self.name))
+        # Get the name bytes
+        byte_form += self.name.encode('ascii')
+        return byte_form
+
+    @abstractmethod
+    def get_payload_bytes(self):
+        pass
+
+    # @abstractmethod
+    def get_byte_form(self):
+        return self.get_header_bytes() + self.get_payload_bytes()
+
     def __str__(self):
         return f"{self.tag_type}, {self.name}, {self.val}"
 
@@ -84,6 +102,15 @@ class TagEnd(Tag):
     def read(self, byte_handler: ByteHandler):
         self.tag_type = byte_handler.read_byte()
 
+    def read_payload(self, byte_handler: ByteHandler):
+        pass
+
+    def get_payload_bytes(self):
+        return b''
+
+    def get_byte_form(self):
+        return struct.pack(">B", 0)
+
 
 class TagByte(Tag):
     def read(self, byte_handler: ByteHandler):        
@@ -94,6 +121,10 @@ class TagByte(Tag):
     def read_payload(self, byte_handler: ByteHandler):
         self.val = byte_handler.read_byte()
 
+    def get_payload_bytes(self):
+        return struct.pack(">B", self.val)
+
+
 class TagShort(Tag):
     def read(self, byte_handler: ByteHandler):        
         self.tag_type = byte_handler.read_byte()
@@ -102,6 +133,9 @@ class TagShort(Tag):
 
     def read_payload(self, byte_handler: ByteHandler):
         self.val = byte_handler.read_short()
+
+    def get_payload_bytes(self):
+        return struct.pack(">h", self.val)
 
 
 class TagInt(Tag):
@@ -113,6 +147,9 @@ class TagInt(Tag):
     def read_payload(self, byte_handler: ByteHandler):
         self.val = byte_handler.read_int()
 
+    def get_payload_bytes(self):
+        return struct.pack(">i", self.val)
+
 
 class TagLong(Tag):
     def read(self, byte_handler: ByteHandler):        
@@ -122,6 +159,9 @@ class TagLong(Tag):
 
     def read_payload(self, byte_handler: ByteHandler):
         self.val = byte_handler.read_long()
+
+    def get_playload_bytes(self):
+        return struct.pack(">l", self.val)
 
 
 class TagFloat(Tag):
@@ -133,6 +173,9 @@ class TagFloat(Tag):
     def read_payload(self, byte_handler: ByteHandler):
         self.val = byte_handler.read_float()
 
+    def get_payload_bytes(self):
+        return struct.pack(">f", self.val)
+
 
 class TagDouble(Tag):
     def read(self, byte_handler: ByteHandler):        
@@ -142,6 +185,9 @@ class TagDouble(Tag):
 
     def read_payload(self, byte_handler: ByteHandler):
         self.val = byte_handler.read_double()
+
+    def get_payload_bytes(self):
+        return struct.pack(">d", self.val)
 
 
 class TagByteArray(Tag):
@@ -156,8 +202,17 @@ class TagByteArray(Tag):
         for i in range(arr_size):
             # These tags will only store the payloads
             new_tag = TagByte()
-            new_tag.read_payload()
+            new_tag.read_payload(byte_handler)
             self.val.append(new_tag)
+
+    def get_payload_bytes(self):
+        b = b''
+        # Write the int size of the byte array
+        b += struct.pack(">i", len(self.val))
+        # Write size bytes
+        for byte in self.val:
+            b += struct.pack(">B", byte)
+        return b
 
     def __str__(self):
         s = f"Byte Array '{self.name}': {self.val}"
@@ -175,11 +230,19 @@ class TagString(Tag):
         length = byte_handler.read_short()
         self.val = byte_handler.read_str(length)
 
+    def get_payload_bytes(self):
+        b = b''
+        # Write the unsigned short size of the byte array
+        b += struct.pack(">H", len(self.val))
+        # Write size bytes
+        b += self.val.encode('ascii')
+        return b
+
 
 class TagList(Tag):
-    def __init__(self):
-        super().__init__()
-        self.sub_tag_type = None
+    def __init__(self, tag_type=None, name=None, val=None, sub_tag_type=None):
+        super().__init__(tag_type, name, val)
+        self.sub_tag_type = sub_tag_type
 
     def read(self, byte_handler: ByteHandler):        
         self.tag_type = byte_handler.read_byte()
@@ -195,6 +258,17 @@ class TagList(Tag):
             tag = TagType()
             tag.read_payload(byte_handler)
             self.val.append(tag)
+
+    def get_payload_bytes(self):
+        b = b''
+        # Write the tag type for the list items
+        b += struct.pack(">B", self.sub_tag_type)
+        # Write the int size of the byte array
+        b += struct.pack(">i", len(self.val))
+        # Write size tags of type sub_tag_type
+        for tag in self.val:
+            b += tag.get_payload_bytes()
+        return b
 
     def __str__(self):
         # TODO: Shouldn't print self.name if it is just going to be null
@@ -224,6 +298,16 @@ class TagCompound(Tag):
             tag.read(byte_handler)
             self.val.append(tag)
 
+    def get_payload_bytes(self):
+        b = b''
+        # Write all complete tags we have
+        for tag in self.val:
+            b += tag.get_byte_form()
+        # And last, we'll write the TAG_END
+        tag = TagEnd()
+        b += tag.get_byte_form()
+        return b
+
     def __str__(self):
         s = f"Compound '{self.name}'"
         for i, subtag in enumerate(self.val):
@@ -244,7 +328,17 @@ class TagIntArray(Tag):
             tag = TagInt()
             tag.read_payload(byte_handler)
             self.val.append(tag)
-    
+
+    def get_payload_bytes(self):
+        b = b''
+        # Write the int size of the int array
+        b += struct.pack(">i", len(self.val))
+        # Write size ints
+        for i in self.val:
+            # b += struct.pack(">i", i)
+            b += i.get_payload_bytes()
+        return b
+
     def __str__(self):
         s = f"Int Array '{self.name}': {self.val}"
         return s 
@@ -263,6 +357,16 @@ class TagLongArray(Tag):
             tag = TagLong()
             tag.read_payload()
             self.val.append(tag)
+
+    def get_payload_bytes(self):
+        b = b''
+        # Write the int size of the long array
+        b += struct.pack(">i", len(self.val))
+        # Write size longs
+        for l in self.val:
+            # b += struct.pack(">l", l)
+            b += l.get_payload_bytes()  
+        return b
 
     def __str__(self):
         s = f"Long Array '{self.name}': {self.val}"
@@ -309,6 +413,33 @@ def inventory_bytes_from_save(level_file):
     found_index = bytes.find(b'\x09\x00\x09\x49\x6E\x76\x65\x6E\x74\x6F\x72\x79')
     return bytes[found_index:]
 
+def create_item():
+    # We'll start by creating the most basic item:
+    # Compound with Slot, Count, and String
+    new_item = TagCompound()
+    slot_tag = TagByte()
+    slot_tag.val = 100
+    id_tag = TagString()
+    id_tag.val = 'minecraft:tnt'
+    count_tag = TagByte()
+    count_tag.val = 64
+    return new_item
+
+def add_inventory_item(invtag: TagList):
+    new_item = create_item()
+    invtag.val.append(new_item)
+
+def write_tag():
+    tag = TagIntArray(11, "int array one", [TagInt(3, "integer1", 10), TagInt(3, "integer2", 100), TagInt(3, "integer3", 1000)])
+    byte_arr = tag.get_byte_form()
+    print(byte_arr)
+    with open('test.bin', 'wb') as f :
+        f.write(byte_arr)
+    bh = ByteHandler(byte_arr)
+    tag = TagIntArray()
+    tag.read(bh)
+    print(tag)
+
 # def main():
     # b = hex_str_to_byte_arr('080002696400186D696E6563726166743A7370727563655F7361706C696E67')
     # b = hex_str_to_byte_arr('050005666c6f6174400ccccd')
@@ -322,16 +453,18 @@ def main():
     # Read the minecraft save file 
     # with open('level.dat', 'rb') as file:
     #     bytes = file.read()
-    with gzip.open('level2.dat', 'rb') as file:
-        bytes = file.read()
+    # with gzip.open('level2.dat', 'rb') as file:
+        # bytes = file.read()
     # Look for the start of the inventory list in the data file
-    found_index = bytes.find(b'\x09\x00\x09\x49\x6E\x76\x65\x6E\x74\x6F\x72\x79')
-    bh = ByteHandler(bytes[found_index:])
+    # found_index = bytes.find(b'\x09\x00\x09\x49\x6E\x76\x65\x6E\x74\x6F\x72\x79')
+    # bh = ByteHandler(bytes[found_index:])
     # print(bh.read_byte())
 
-    invtag = TagList()
-    invtag.read(bh)
-    print(invtag)
+    # invtag = TagList()
+    # invtag.read(bh)
+    # print(invtag)
+
+    write_tag()
 
 
 if __name__ == '__main__':
