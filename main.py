@@ -416,29 +416,29 @@ def inventory_bytes_from_save(level_file):
 def create_item():
     # We'll start by creating the most basic item:
     # Compound with Slot, Count, and String
-    new_item = TagCompound()
-    slot_tag = TagByte()
-    slot_tag.val = 100
-    id_tag = TagString()
-    id_tag.val = 'minecraft:tnt'
-    count_tag = TagByte()
-    count_tag.val = 64
+    new_item = TagCompound(10, None, [])
+    slot_tag = TagByte(1, "Slot", 2)
+    id_tag = TagString(8, "id", 'minecraft:tnt')
+    count_tag = TagByte(1, "Count", 64)
+    new_item.val.append(slot_tag)
+    new_item.val.append(id_tag)
+    new_item.val.append(count_tag)
     return new_item
 
 def add_inventory_item(invtag: TagList):
     new_item = create_item()
     invtag.val.append(new_item)
 
-def write_tag():
-    tag = TagIntArray(11, "int array one", [TagInt(3, "integer1", 10), TagInt(3, "integer2", 100), TagInt(3, "integer3", 1000)])
-    byte_arr = tag.get_byte_form()
-    print(byte_arr)
-    with open('test.bin', 'wb') as f :
-        f.write(byte_arr)
-    bh = ByteHandler(byte_arr)
-    tag = TagIntArray()
-    tag.read(bh)
-    print(tag)
+# def write_tag():
+#     tag = TagIntArray(11, "int array one", [TagInt(3, "integer1", 10), TagInt(3, "integer2", 100), TagInt(3, "integer3", 1000)])
+#     byte_arr = tag.get_byte_form()
+#     print(byte_arr)
+#     with open('test.bin', 'wb') as f :
+#         f.write(byte_arr)
+#     bh = ByteHandler(byte_arr)
+#     tag = TagIntArray()
+#     tag.read(bh)
+#     print(tag)
 
 # def main():
     # b = hex_str_to_byte_arr('080002696400186D696E6563726166743A7370727563655F7361706C696E67')
@@ -448,6 +448,34 @@ def write_tag():
     # tag = TagFloat()
     # tag.read(byte_handler)
     # print(tag)
+
+def save_file_to_byte_handler(savefile):
+    with gzip.open(savefile, 'rb') as file:
+        bytes = file.read()
+
+    # Look for the start of the inventory list in the data file
+    found_index = bytes.find(b'\x09\x00\x09\x49\x6E\x76\x65\x6E\x74\x6F\x72\x79')
+    return ByteHandler(bytes[found_index:])
+
+def patch_inventory(orig_file_name: str, 
+                    new_file_name: str, 
+                    invtag: TagList, 
+                    bh: ByteHandler):
+    origfile = gzip.open(orig_file_name, 'rb')
+    newfile = gzip.open(new_file_name, 'wb')
+    bytes = origfile.read()
+    # Look for the start of the inventory list in the data file
+    found_index = bytes.find(b'\x09\x00\x09\x49\x6E\x76\x65\x6E\x74\x6F\x72\x79')
+
+    # Write all bytes up to the inventory
+    newfile.write(bytes[:found_index])
+    # Write our new inventory
+    newfile.write(invtag.get_byte_form())
+    # Write everything after the inventory
+    newfile.write(bytes[found_index+bh.cur_byte:])
+    
+    origfile.close()
+    newfile.close()
 
 def main():
     # Read the minecraft save file 
@@ -464,8 +492,13 @@ def main():
     # invtag.read(bh)
     # print(invtag)
 
-    write_tag()
-
+    # write_tag()
+    savefile = "level4.dat"
+    bh = save_file_to_byte_handler(savefile)
+    invtag = TagList()
+    invtag.read(bh)
+    add_inventory_item(invtag)
+    patch_inventory(savefile, "newlevel.dat", invtag, bh)
 
 if __name__ == '__main__':
-    main() 
+    main()
