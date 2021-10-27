@@ -1,6 +1,21 @@
 import gzip
 import struct
-from abc import ABC, abstractmethod 
+from abc import ABC, abstractmethod
+from typing import List 
+
+class Item:
+    slot: int
+    count: int
+    id: str
+
+    def __init__(self, slot=None, count=None, id=None):
+        self.slot = slot
+        self.count = count 
+        self.id = id 
+
+    def __str__(self):
+        return f"Slot {self.slot}, Count {self.count}, ID, {self.id}"
+
 
 class ByteHandler:
     def __init__(self, bytes: bytearray):
@@ -429,6 +444,23 @@ def add_inventory_item(invtag: TagList):
     new_item = create_item()
     invtag.val.append(new_item)
 
+def inventory_to_items(invtag: TagList) -> List[Item]:
+    # Each item will be a TagCompound in invtag.vals
+    # Each item will have 3 tags that we care about
+    # TODO: Should add some form of error handling
+    items = []
+    for compound in invtag.val:
+        item = Item()
+        for tag in compound.val:
+            if tag.name == 'Slot':
+                item.slot = tag.val
+            elif tag.name == 'id':
+                item.id = tag.val
+            elif tag.name == 'Count':
+                item.count = tag.val
+        items.append(item)
+    return items
+
 # def write_tag():
 #     tag = TagIntArray(11, "int array one", [TagInt(3, "integer1", 10), TagInt(3, "integer2", 100), TagInt(3, "integer3", 1000)])
 #     byte_arr = tag.get_byte_form()
@@ -493,12 +525,23 @@ def main():
     # print(invtag)
 
     # write_tag()
+    for item in get_items():
+        print(item)
+
     savefile = "level4.dat"
     bh = save_file_to_byte_handler(savefile)
     invtag = TagList()
     invtag.read(bh)
     add_inventory_item(invtag)
     patch_inventory(savefile, "newlevel.dat", invtag, bh)
+
+# TODO: REMOVE THIS IS JUST FOR TESTING
+def get_items():
+    savefile = "level4.dat"
+    bh = save_file_to_byte_handler(savefile)
+    invtag = TagList()
+    invtag.read(bh)
+    return inventory_to_items(invtag)
 
 if __name__ == '__main__':
     main()

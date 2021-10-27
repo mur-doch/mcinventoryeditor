@@ -1,16 +1,6 @@
 import tkinter as tk
 from tkinter.constants import DISABLED
-
-class Item:
-    slot: int
-    count: int
-    id: str
-
-    def __init__(self, slot=None, count=None, id=None):
-        self.slot = slot
-        self.count = count 
-        self.id = id 
-
+from main import Item, get_items
 
 class ModifyItemPopupWindow:
     def __init__(self, master, item_slot, item):
@@ -105,31 +95,37 @@ class App(tk.Frame):
         self.grid()
 
         # Add all of the item slots
-        self.itemslots = []
+        self.itemslots = {}
 
         # Add the armour slots
         slot_num = 103
         for r in range(0, 4):
-            self.itemslots.append(ItemSlot(None, r, 0, slot_num))
+            self.itemslots[slot_num] = ItemSlot(None, r, 0, slot_num)
             slot_num -= 1
         
         # Add the shield slot
-        self.itemslots.append(ItemSlot(None, 3, 4, -106))
+        self.itemslots[slot_num] = ItemSlot(None, 3, 4, -106)
 
         # Now the 3 main inventory rows
         startr = 4
         slot_num = 9
         for r in range(0, 3):
             for c in range(0, 9):
-                self.itemslots.append(ItemSlot(None, r + startr, c, slot_num))
+                self.itemslots[slot_num] = ItemSlot(None, r + startr, c, slot_num)
                 slot_num += 1
         
         # The equip row
         startr = 7
         slot_num = 0
         for c in range(0, 9):
-            self.itemslots.append(ItemSlot(None, startr, c, slot_num))
+            self.itemslots[slot_num] = ItemSlot(None, startr, c, slot_num)
             slot_num += 1
+
+        # TODO: REMOVE THIS IS JUST FOR TESTING
+        invItems = get_items()
+        for item in invItems:
+            self.itemslots[item.slot].item = item
+            print(item)
 
         # self.entrythingy = tk.Entry()
         # self.entrythingy.pack()
