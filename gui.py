@@ -1,8 +1,19 @@
 import tkinter as tk
 from tkinter.constants import DISABLED
 
+class Item:
+    slot: int
+    count: int
+    id: str
+
+    def __init__(self, slot=None, count=None, id=None):
+        self.slot = slot
+        self.count = count 
+        self.id = id 
+
+
 class ModifyItemPopupWindow:
-    def __init__(self, master, item_slot):
+    def __init__(self, master, item_slot, item):
         #self.master = master
         window = tk.Toplevel(master)
         self.window = window
@@ -13,6 +24,14 @@ class ModifyItemPopupWindow:
         self.var_id = tk.StringVar(window, '', name='ID')
         # This would be for adding the further item information
         # self.var_additional = tk.StringVar
+
+        # TODO: Feel like there should be a cleaner way of doing this
+        # Try to load the variables from the item_slot's item obj
+        self.var_slot.set(item.slot)
+        if item.count is not None:
+            self.var_count.set(item.count)
+        if item.id is not None:
+            self.var_id.set(item.id)
 
         # Create the GUI representation for each of the variables
         slotLabel = tk.Label(window, text="Slot: ")
@@ -38,9 +57,19 @@ class ModifyItemPopupWindow:
         button_close.pack(fill='x')
 
         self.item_slot = item_slot
+        self.item = item
 
     def save(self):
         print("Saving...")
+        print("Item data:")
+        print(f"Slot: {self.var_slot.get()}")
+        print(f"Count: {self.var_count.get()}")
+        print(f"ID: {self.var_id.get()}")
+
+        # Save the variable data to item
+        # self.item.slot = self.var_slot.get()
+        self.item.count = self.var_count.get()
+        self.item.id = self.var_id.get()
 
     def close(self):
         print("Closing...")
@@ -49,7 +78,7 @@ class ModifyItemPopupWindow:
 
 
 class ItemSlot(tk.Frame):
-    def __init__(self, master, row, column):
+    def __init__(self, master, row, column, slot_num):
         super().__init__(master, 
                         # bg="#898c87", 
                         bg="#a6a6a6",
@@ -58,9 +87,13 @@ class ItemSlot(tk.Frame):
         self.grid(column=column, row=row, padx=5, pady=5)
         self.bind('<Button-1>', self.handle_click)
         self.popup_window = None
+        
+        # New item object that will store the item data associated with the
+        # slot
+        self.item = Item(slot=slot_num)
     
     def handle_click(self, event):
-        self.popup_window = ModifyItemPopupWindow(None, self)
+        self.popup_window = ModifyItemPopupWindow(None, self, self.item)
 
 
 class App(tk.Frame):
@@ -75,22 +108,28 @@ class App(tk.Frame):
         self.itemslots = []
 
         # Add the armour slots
+        slot_num = 103
         for r in range(0, 4):
-            self.itemslots.append(ItemSlot(None, r, 0))
+            self.itemslots.append(ItemSlot(None, r, 0, slot_num))
+            slot_num -= 1
         
         # Add the shield slot
-        self.itemslots.append(ItemSlot(None, 3, 4))
+        self.itemslots.append(ItemSlot(None, 3, 4, -106))
 
         # Now the 3 main inventory rows
         startr = 4
+        slot_num = 9
         for r in range(0, 3):
             for c in range(0, 9):
-                self.itemslots.append(ItemSlot(None, r + startr, c))
+                self.itemslots.append(ItemSlot(None, r + startr, c, slot_num))
+                slot_num += 1
         
         # The equip row
         startr = 7
+        slot_num = 0
         for c in range(0, 9):
-            self.itemslots.append(ItemSlot(None, startr, c))
+            self.itemslots.append(ItemSlot(None, startr, c, slot_num))
+            slot_num += 1
 
         # self.entrythingy = tk.Entry()
         # self.entrythingy.pack()
