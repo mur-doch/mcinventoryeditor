@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter.constants import DISABLED
-from main import Item, get_items
+from main import Item, get_items, save_items
 
 class ModifyItemPopupWindow:
     def __init__(self, master, item_slot, item):
@@ -100,32 +100,32 @@ class App(tk.Frame):
         # Add the armour slots
         slot_num = 103
         for r in range(0, 4):
-            self.itemslots[slot_num] = ItemSlot(None, r, 0, slot_num)
+            self.itemslots[slot_num] = ItemSlot(self, r, 0, slot_num)
             slot_num -= 1
         
         # Add the shield slot
-        self.itemslots[slot_num] = ItemSlot(None, 3, 4, -106)
+        self.itemslots[slot_num] = ItemSlot(self, 3, 4, -106)
 
         # Now the 3 main inventory rows
         startr = 4
         slot_num = 9
         for r in range(0, 3):
             for c in range(0, 9):
-                self.itemslots[slot_num] = ItemSlot(None, r + startr, c, slot_num)
+                self.itemslots[slot_num] = ItemSlot(self, r + startr, c, slot_num)
                 slot_num += 1
         
         # The equip row
         startr = 7
         slot_num = 0
         for c in range(0, 9):
-            self.itemslots[slot_num] = ItemSlot(None, startr, c, slot_num)
+            self.itemslots[slot_num] = ItemSlot(self, startr, c, slot_num)
             slot_num += 1
 
-        # TODO: REMOVE THIS IS JUST FOR TESTING
-        invItems = get_items()
-        for item in invItems:
-            self.itemslots[item.slot].item = item
-            print(item)
+        button_save = tk.Button(self, text="Save", command=self.save)
+        button_save.grid(row = 0, column=5, columnspan=3, sticky='nsew')
+
+        button_load = tk.Button(self, text="Load", command=self.load)
+        button_load.grid(row = 1, column=5, columnspan=3, sticky='nsew')
 
         # self.entrythingy = tk.Entry()
         # self.entrythingy.pack()
@@ -144,11 +144,30 @@ class App(tk.Frame):
     def print_contents(self, event):
         print('The contents: ', self.contents.get())
 
+    def save(self):
+        print("Saving...")
+        items = []
+        for itemslot in self.itemslots:
+            item = self.itemslots[itemslot].item
+            if item.is_valid():
+                items.append(item)
+                print(item)
+        # Write items
+        save_items(items)
+
+    def load(self):
+        print("Loading...")
+        # TODO: REMOVE THIS IS JUST FOR TESTING
+        invItems = get_items()
+        for item in invItems:
+            self.itemslots[item.slot].item = item
+            print(item)
+
 
 root = tk.Tk()
 root.title("MC Inventory Editor")
 root.minsize(800, 600)
-root.configure(background="#c6c6c6")
+# root.configure(background="#c6c6c6")
 # root.maxsize(800, 600)
 app = App(root)
 app.mainloop()

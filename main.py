@@ -13,6 +13,17 @@ class Item:
         self.count = count 
         self.id = id 
 
+    def is_valid(self):
+        if self.slot is None or self.count is None or self.id is None:
+            return False 
+
+        if (0 <= self.slot <= 35 or 100 <= self.slot <= 103 or self.slot == -106) \
+            and 0 < self.count <= 255 \
+            and self.id != '':
+            return True 
+        return False
+
+
     def __str__(self):
         return f"Slot {self.slot}, Count {self.count}, ID, {self.id}"
 
@@ -543,5 +554,29 @@ def get_items():
     invtag.read(bh)
     return inventory_to_items(invtag)
 
+# TODO: REMOVE -- hacky version of save
+def inventory_insert_item(invtag: TagList, item: Item):
+    slotTag = TagByte(tag_type=1, name='Slot', val=item.slot)
+    idTag = TagString(tag_type=8, name='id', val=item.id)
+    countTag = TagByte(tag_type=1, name='Count', val=item.count)
+    tag = TagCompound(val=[slotTag, idTag, countTag])
+    invtag.val.append(tag)
+
+def save_items(items: List[Item]):
+    savefile = "level4.dat"
+    bh = save_file_to_byte_handler(savefile)
+    invtag = TagList()
+    invtag.read(bh)
+    invtag.val = []
+    for item in items:
+        inventory_insert_item(invtag, item)
+    # add_inventory_item(invtag)
+    patch_inventory(savefile, "newlevel.dat", invtag, bh)
+
+def test():
+    items = get_items()
+    save_items(items)
+
 if __name__ == '__main__':
-    main()
+    test()
+    # main()
