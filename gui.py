@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter.constants import DISABLED
 from pathlib import Path
-# from main import Item, get_items, save_items
-from main import Item, InventoryHandler
+
+from Item import Item
+from InventoryHandler import InventoryHandler
 
 class ModifyItemPopupWindow:
     def __init__(self, master, item_slot, item):
