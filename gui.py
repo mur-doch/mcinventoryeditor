@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter.constants import DISABLED
-from main import Item, get_items, save_items
+from pathlib import Path
+# from main import Item, get_items, save_items
+from main import Item, InventoryHandler
 
 class ModifyItemPopupWindow:
     def __init__(self, master, item_slot, item):
@@ -127,24 +129,13 @@ class App(tk.Frame):
         button_load = tk.Button(self, text="Load", command=self.load)
         button_load.grid(row = 1, column=5, columnspan=3, sticky='nsew')
 
-        # self.entrythingy = tk.Entry()
-        # self.entrythingy.pack()
-        # print(self.winfo_children())
-        # Create the application variable
-        # self.contents = tk.StringVar()
-        # Set it to some value
-        # self.contents.set("this is a variable")
-        # Tell the entry widget to watch this variable
-        # self.entrythingy["textvariable"] = self.contents
-
-        # Define a callback for when the user hits return
-        # It prints the current value of the variable
-        # self.entrythingy.bind('<Key-Return>', self.print_contents)
-
-    def print_contents(self, event):
-        print('The contents: ', self.contents.get())
-
     def save(self):
+        # TODO: Right now we're just assuming that inventoryHandler has 
+        # already been created
+        if self.inventoryHandler is None:
+            print("Cannot save: an inventory file has not been loaded yet.")
+            return
+
         print("Saving...")
         items = []
         for itemslot in self.itemslots:
@@ -153,12 +144,22 @@ class App(tk.Frame):
                 items.append(item)
                 print(item)
         # Write items
-        save_items(items)
+        # save_items(items)
+        # TODO: Hardcoded save path
+        self.inventoryHandler.write_items(items, Path('.') / 'newlevel.dat')
 
     def load(self):
         print("Loading...")
         # TODO: REMOVE THIS IS JUST FOR TESTING
-        invItems = get_items()
+        # TODO: Since this is modifying the item slots, we should probably 
+        # empty them all first (so we don't get remaining data from a 
+        # previously loaded file).
+        # invItems = get_items()
+        # for item in invItems:
+        #     self.itemslots[item.slot].item = item
+        #     print(item)
+        self.inventoryHandler = InventoryHandler(Path('.') / 'level4.dat')
+        invItems = self.inventoryHandler.get_items()
         for item in invItems:
             self.itemslots[item.slot].item = item
             print(item)
