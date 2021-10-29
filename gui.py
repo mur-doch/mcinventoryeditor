@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter.filedialog import askopenfilename
 from tkinter.constants import DISABLED
 from pathlib import Path
 
@@ -147,7 +148,10 @@ class App(tk.Frame):
         # Write items
         # save_items(items)
         # TODO: Hardcoded save path
-        self.inventoryHandler.write_items(items, Path('.') / 'newlevel.dat')
+        file_to_save = askopenfilename()
+        save_path = Path(file_to_save)
+        # self.inventoryHandler.write_items(items, Path('.') / 'newlevel.dat')
+        self.inventoryHandler.write_items(items, save_path)
 
     def load(self):
         print("Loading...")
@@ -159,7 +163,10 @@ class App(tk.Frame):
         # for item in invItems:
         #     self.itemslots[item.slot].item = item
         #     print(item)
-        self.inventoryHandler = InventoryHandler(Path('.') / 'level4.dat')
+        file_to_load = askopenfilename()
+        load_path = Path(file_to_load)
+        # self.inventoryHandler = InventoryHandler(Path('.') / 'level4.dat')
+        self.inventoryHandler = InventoryHandler(load_path)
         invItems = self.inventoryHandler.get_items()
         for item in invItems:
             self.itemslots[item.slot].item = item
