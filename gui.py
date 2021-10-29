@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter.filedialog import askopenfilename
-from tkinter.constants import DISABLED
+from tkinter.constants import DISABLED, BOTH
 from pathlib import Path
 
 from Item import Item
@@ -125,15 +125,60 @@ class App(tk.Frame):
             self.itemslots[slot_num] = ItemSlot(self, startr, c, slot_num)
             slot_num += 1
 
-        button_save = tk.Button(self, text="Save", command=self.save)
-        button_save.grid(row = 0, column=5, columnspan=3, sticky='nsew')
+        # VARIABLES
+        # TODO: Should be put at the top
+        self.inventoryHandler = None
+        self.save_path = None
+        self.load_path = None
 
-        button_load = tk.Button(self, text="Load", command=self.load)
-        button_load.grid(row = 1, column=5, columnspan=3, sticky='nsew')
+        self.var_save_path = tk.StringVar(self, '', name='Save Path')
+        self.var_load_path = tk.StringVar(self, '', name='Load Path')
+
+        self.input_frame = tk.Frame(self)
+        self.input_frame.grid(row=0, rowspan=3, column=5, columnspan=3)
+
+        # Create the save and load file location inputs
+        self.text_save_location = tk.Entry(
+            self.input_frame, 
+            textvariable=self.var_save_path)
+        self.text_save_location.pack(fill=BOTH, expand=True)
+        self.button_save_location = tk.Button(
+            self.input_frame, 
+            text="Set Save Location", 
+            command=self.get_save_location)
+        self.button_save_location.pack(fill=BOTH, expand=True)
+
+        self.text_load_location = tk.Entry(
+            self.input_frame, 
+            textvariable=self.var_load_path)
+        self.text_load_location.pack(fill=BOTH, expand=True)
+        self.button_load_location = tk.Button(
+            self.input_frame, 
+            text="Set Load Location", 
+            command=self.get_load_location)
+        self.button_load_location.pack(fill=BOTH, expand=True)
+
+        # Create the save and load buttons
+        self.button_save = tk.Button(
+            self.input_frame, 
+            text="Save to file", 
+            command=self.save)
+        # self.button_save.grid(row = 1, column=5, columnspan=3, sticky='nsew')
+        self.button_save.pack(fill=BOTH, expand=True)
+
+        self.button_load = tk.Button(
+            self.input_frame, 
+            text="Load from file", 
+            command=self.load)
+        # self.button_load.grid(row = 2, column=5, columnspan=3, sticky='nsew')
+        self.button_load.pack(fill=BOTH, expand=True)
 
     def save(self):
-        # TODO: Right now we're just assuming that inventoryHandler has 
-        # already been created
+        file_to_save = self.var_save_path.get()
+        save_path = Path(file_to_save)
+        if not save_path.exists() or not save_path.is_file():
+            print("The save path must be an existing file.")
+
         if self.inventoryHandler is None:
             print("Cannot save: an inventory file has not been loaded yet.")
             return
@@ -145,33 +190,36 @@ class App(tk.Frame):
             if item.is_valid():
                 items.append(item)
                 print(item)
-        # Write items
-        # save_items(items)
-        # TODO: Hardcoded save path
-        file_to_save = askopenfilename()
-        save_path = Path(file_to_save)
-        # self.inventoryHandler.write_items(items, Path('.') / 'newlevel.dat')
+
         self.inventoryHandler.write_items(items, save_path)
 
     def load(self):
-        print("Loading...")
-        # TODO: REMOVE THIS IS JUST FOR TESTING
         # TODO: Since this is modifying the item slots, we should probably 
         # empty them all first (so we don't get remaining data from a 
         # previously loaded file).
-        # invItems = get_items()
-        # for item in invItems:
-        #     self.itemslots[item.slot].item = item
-        #     print(item)
-        file_to_load = askopenfilename()
+        # file_to_load = askopenfilename()
+        file_to_load = self.var_load_path.get()
         load_path = Path(file_to_load)
-        # self.inventoryHandler = InventoryHandler(Path('.') / 'level4.dat')
+        if not load_path.exists() or not load_path.is_file():
+            print("The load path must be an existing file.")
+            return
+
+        print("Loading...")
         self.inventoryHandler = InventoryHandler(load_path)
         invItems = self.inventoryHandler.get_items()
         for item in invItems:
             self.itemslots[item.slot].item = item
             print(item)
 
+    def get_save_location(self):
+        self.save_path = Path(askopenfilename())
+        self.text_save_location.delete(0, tk.END)
+        self.text_save_location.insert(0, str(self.save_path.absolute()))
+
+    def get_load_location(self):
+        self.load_path = Path(askopenfilename())
+        self.text_load_location.delete(0, tk.END)
+        self.text_load_location.insert(0, str(self.load_path.absolute()))
 
 root = tk.Tk()
 root.title("MC Inventory Editor")
