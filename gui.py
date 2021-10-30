@@ -6,8 +6,55 @@ from pathlib import Path
 from Item import Item
 from InventoryHandler import InventoryHandler
 
+
+class ItemSpriteHandler:
+    def __init__(self):
+        self.spritesheet = tk.PhotoImage(file="items-28.png")
+
+        self.sprite_width = 32
+        self.sprite_height = 32
+        self.spritesheet_width = 27
+        self.spritesheet_height = 27
+
+        # Load images
+        self.images = []
+        for row in range(self.spritesheet_height):
+            for col in range(self.spritesheet_width):
+                l = col * self.sprite_width
+                t = row * self.sprite_height
+                self.images.append(
+                    self.subimage(
+                        l, t, l + self.sprite_width, t + self.sprite_height
+                    )
+                )
+
+        # Load the dictionary that will map from the minecraft id string to
+        # the index in the images list
+        self.mcid_to_index = {}
+        file = open('Scraping/mcid_to_index.csv', 'r')
+        for line in file:
+            mcid, raw_index = line.split(',')
+            self.mcid_to_index[mcid] = int(raw_index)
+
+    def subimage(self, l, t, r, b):
+        new_image = tk.PhotoImage()
+        new_image.tk.call(
+            new_image, 
+            'copy', 
+            self.spritesheet, 
+            '-from', 
+            l, t, r, b, 
+            '-to', 
+            0, 0
+        )
+        return new_image
+
+    def get_image(self, minecraft_id: str) -> tk.PhotoImage:
+        return self.images[self.mcid_to_index[minecraft_id]]
+
+
 class ModifyItemPopupWindow:
-    def __init__(self, master, item_slot, item):
+    def __init__(self, master, item_slot, item, on_save):
         #self.master = master
         window = tk.Toplevel(master)
         self.window = window
@@ -53,6 +100,8 @@ class ModifyItemPopupWindow:
         self.item_slot = item_slot
         self.item = item
 
+        self.on_save = on_save
+
     def save(self):
         print("Saving...")
         print("Item data:")
@@ -64,6 +113,9 @@ class ModifyItemPopupWindow:
         # self.item.slot = self.var_slot.get()
         self.item.count = self.var_count.get()
         self.item.id = self.var_id.get()
+
+        if self.on_save is not None:
+            self.on_save()
 
     def close(self):
         print("Closing...")
@@ -79,15 +131,43 @@ class ItemSlot(tk.Frame):
                         width=64, 
                         height=64)
         self.grid(column=column, row=row, padx=5, pady=5)
-        self.bind('<Button-1>', self.handle_click)
         self.popup_window = None
         
         # New item object that will store the item data associated with the
         # slot
         self.item = Item(slot=slot_num)
+
+        # Won't have any image by default
+        self.image_label = tk.Label(self, bg="#a6a6a6")
+        # self.image_label.grid(column=0, row=0)
+        self.image_label.pack(expand=True, fill=BOTH)
+        # This stops the frame from shrinking with the label
+        # Very weird, but it makes them have a constant size
+        self.pack_propagate(0)
+
+        self.image_label.bind('<Button-1>', self.handle_click)
     
     def handle_click(self, event):
-        self.popup_window = ModifyItemPopupWindow(None, self, self.item)
+        self.popup_window = ModifyItemPopupWindow(
+            None, 
+            self, 
+            self.item, 
+            self.on_save
+        )
+
+    def set_image(self, img: tk.PhotoImage):
+        self.image_label.configure(image=img)
+
+    def set_item(self, item: Item):
+        self.item = item
+        # if self.item.id != None:
+        #     self.set_image(self.item.id)
+        # else:
+        #     # TODO: This might give error
+        #     self.set_image(None)
+
+    def on_save(self):
+        self.set_image(itemSpriteHandler.get_image(self.item.id))
 
 
 class App(tk.Frame):
@@ -100,6 +180,8 @@ class App(tk.Frame):
 
         # Add all of the item slots
         self.itemslots = {}
+
+        self.itemSpriteHandler = ItemSpriteHandler()
 
         # Add the armour slots
         slot_num = 103
@@ -197,7 +279,9 @@ class App(tk.Frame):
         # TODO: Since this is modifying the item slots, we should probably 
         # empty them all first (so we don't get remaining data from a 
         # previously loaded file).
-        # file_to_load = askopenfilename()
+        for itemslot in self.itemslots:
+            self.itemslots[itemslot].item = Item(itemslot)
+
         file_to_load = self.var_load_path.get()
         load_path = Path(file_to_load)
         if not load_path.exists() or not load_path.is_file():
@@ -208,7 +292,11 @@ class App(tk.Frame):
         self.inventoryHandler = InventoryHandler(load_path)
         invItems = self.inventoryHandler.get_items()
         for item in invItems:
-            self.itemslots[item.slot].item = item
+            # self.itemslots[item.slot].item = item
+            self.itemslots[item.slot].set_item(item)
+            self.itemslots[item.slot].set_image(
+                self.itemSpriteHandler.get_image(item.id)
+            )
             print(item)
 
     def get_save_location(self):
@@ -226,5 +314,7 @@ root.title("MC Inventory Editor")
 root.minsize(800, 600)
 # root.configure(background="#c6c6c6")
 # root.maxsize(800, 600)
+# TODO: This should probably not be a global
+itemSpriteHandler = ItemSpriteHandler()
 app = App(root)
 app.mainloop()
