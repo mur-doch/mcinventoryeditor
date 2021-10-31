@@ -146,17 +146,33 @@ class ItemSlot(tk.Frame):
         self.pack_propagate(0)
 
         self.image_label.bind('<Button-1>', self.handle_click)
+
+        self.count_label = tk.Label(self, bg="#a6a6a6", text="", borderwidth=1, relief='solid')
+        self.count_label.place(relx=1.0, rely=1.0, x=-2, y=-2,anchor="se")
+        self.count_label.place_forget()
     
     def handle_click(self, event):
         self.popup_window = ModifyItemPopupWindow(
             None, 
             self, 
             self.item, 
-            self.on_save
+            # self.on_save
+            self.update_display
         )
 
-    def set_image(self, img: tk.PhotoImage):
-        self.image_label.configure(image=img)
+    # def set_image(self, img: tk.PhotoImage):
+    #     self.image_label.configure(image=img)
+    def update_display(self):
+        global itemSpriteHandler
+        if self.item.is_valid():
+            self.image_label.configure(image=itemSpriteHandler.get_image(self.item.id))
+            self.count_label.configure(text=str(self.item.count))
+            self.count_label.place(relx=1.0, rely=1.0, x=-2, y=-2,anchor="se")
+        else:
+            self.image_label.configure(image=None)
+            self.count_label.configure(text="")
+            self.count_label.place_forget()
+
 
     def set_item(self, item: Item):
         self.item = item
@@ -294,9 +310,10 @@ class App(tk.Frame):
         for item in invItems:
             # self.itemslots[item.slot].item = item
             self.itemslots[item.slot].set_item(item)
-            self.itemslots[item.slot].set_image(
-                self.itemSpriteHandler.get_image(item.id)
-            )
+            # self.itemslots[item.slot].set_image(
+            #     self.itemSpriteHandler.get_image(item.id)
+            # )
+            self.itemslots[item.slot].update_display()
             print(item)
 
     def get_save_location(self):
